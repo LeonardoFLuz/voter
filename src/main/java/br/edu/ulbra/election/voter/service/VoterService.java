@@ -34,7 +34,10 @@ public class VoterService {
         this.modelMapper = modelMapper;
         this.passwordEncoder = passwordEncoder;
     }
-
+    
+   
+       
+    
     public List<VoterOutput> getAll(){
         Type voterOutputListType = new TypeToken<List<VoterOutput>>(){}.getType();
         return modelMapper.map(voterRepository.findAll(), voterOutputListType);
@@ -95,7 +98,18 @@ public class VoterService {
 
         return new GenericOutput("Voter deleted");
     }
+   
+    public Voter findByName(String votername){
+        return voterRepository.findByName(votername);
+    }
+    public Voter findByEmail(String email){
+        return voterRepository.findByEmail(email);
+    }
+    
+		
+		
 
+    
     private void validateInput(VoterInput voterInput, boolean isUpdate){
         if (StringUtils.isBlank(voterInput.getEmail())){
             throw new GenericOutputException("Invalid email");
@@ -103,10 +117,35 @@ public class VoterService {
         if (StringUtils.isBlank(voterInput.getName())){
             throw new GenericOutputException("Invalid name");
         }
+        
+        
+        
+        if (this.findByName(voterInput.getName()) != null) {
+            throw new GenericOutputException("Nome ja cadastrado!");
+        }
+        if (this.findByEmail(voterInput.getEmail()) != null) {
+            throw new GenericOutputException("Email ja cadastrado!");
+        }
+        
+        
+        if ((!StringUtils.isEmpty(voterInput.getPassword())) && (!voterInput.getPassword().equals(voterInput.getPasswordConfirm()))){
+            throw new GenericOutputException("Senhas nao conferem");
+        }
+       
+        if(voterInput.getName().length() < 5) {
+            throw new GenericOutputException("Nome teve ter no minimo 5 caracteres");
+        }
+        
+        String[] teste = voterInput.getName().split(" ");
+		if(teste[1] == null) {
+			throw new GenericOutputException("Falta Sobrenome");
+		}
+        
         if (!StringUtils.isBlank(voterInput.getPassword())){
             if (!voterInput.getPassword().equals(voterInput.getPasswordConfirm())){
                 throw new GenericOutputException("Passwords doesn't match");
             }
+            
         } else {
             if (!isUpdate) {
                 throw new GenericOutputException("Password doesn't match");
