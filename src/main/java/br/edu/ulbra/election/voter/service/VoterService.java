@@ -12,7 +12,7 @@ import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.util.DigestUtils;
 import java.lang.reflect.Type;
 import java.util.List;
 
@@ -35,9 +35,6 @@ public class VoterService {
         this.passwordEncoder = passwordEncoder;
     }
     
-   
-       
-    
     public List<VoterOutput> getAll(){
         Type voterOutputListType = new TypeToken<List<VoterOutput>>(){}.getType();
         return modelMapper.map(voterRepository.findAll(), voterOutputListType);
@@ -46,7 +43,10 @@ public class VoterService {
     public VoterOutput create(VoterInput voterInput) {
         validateInput(voterInput, false);
         Voter voter = modelMapper.map(voterInput, Voter.class);
-        voter.setPassword(passwordEncoder.encode(voter.getPassword()));
+        
+        //voter.setPassword(passwordEncoder.encode(voter.getPassword()));
+        voter.setPassword(DigestUtils.md5DigestAsHex((voter.getPassword().getBytes())));
+        
         voter = voterRepository.save(voter);
         return modelMapper.map(voter, VoterOutput.class);
     }
@@ -78,7 +78,8 @@ public class VoterService {
         voter.setEmail(voterInput.getEmail());
         voter.setName(voterInput.getName());
         if (!StringUtils.isBlank(voterInput.getPassword())) {
-            voter.setPassword(passwordEncoder.encode(voterInput.getPassword()));
+            //voter.setPassword(passwordEncoder.encode(voterInput.getPassword()));
+        	voter.setPassword(DigestUtils.md5DigestAsHex((voter.getPassword().getBytes())));
         }
         voter = voterRepository.save(voter);
         return modelMapper.map(voter, VoterOutput.class);
@@ -98,59 +99,37 @@ public class VoterService {
 
         return new GenericOutput("Voter deleted");
     }
-   
-    public Voter findByName(String votername){
-        return voterRepository.findByName(votername);
-    }
-    public Voter findByEmail(String email){
-        return voterRepository.findByEmail(email);
-    }
-    
-		
-		
-
     
     private void validateInput(VoterInput voterInput, boolean isUpdate){
         if (StringUtils.isBlank(voterInput.getEmail())){
             throw new GenericOutputException("Invalid email");
         }
+        
         if (StringUtils.isBlank(voterInput.getName())){
             throw new GenericOutputException("Invalid name");
         }
         
-        
-        
-        if (this.findByName(voterInput.getName()) != null) {
-            throw new GenericOutputException("Nome ja cadastrado!");
-        }
-        if (this.findByEmail(voterInput.getEmail()) != null) {
-            throw new GenericOutputException("Email ja cadastrado!");
-        }
-        
-        
-        if ((!StringUtils.isEmpty(voterInput.getPassword())) && (!voterInput.getPassword().equals(voterInput.getPasswordConfirm()))){
-            throw new GenericOutputException("Senhas nao conferem");
-        }
-       
         if(voterInput.getName().length() < 5) {
-            throw new GenericOutputException("Nome teve ter no minimo 5 caracteres");
+            throw new GenericOutputException("Name must be at least 5 characters");
         }
         
-        String[] teste = voterInput.getName().split(" ");
-		if(teste[1] == null) {
-			throw new GenericOutputException("Falta Sobrenome");
+        String[] names = voterInput.getName().trim().split(" ");
+		if(names.length == 1) {
+			throw new GenericOutputException("Last name is required");
 		}
+		
+        if (voterRepository.findByEmail(voterInput.getEmail()) != null) {
+            throw new GenericOutputException("This email is already registered");
+        }
         
         if (!StringUtils.isBlank(voterInput.getPassword())){
             if (!voterInput.getPassword().equals(voterInput.getPasswordConfirm())){
                 throw new GenericOutputException("Passwords doesn't match");
             }
-            
         } else {
             if (!isUpdate) {
                 throw new GenericOutputException("Password doesn't match");
             }
         }
     }
-
 }
