@@ -85,7 +85,7 @@ public class LoginService {
         if (token == null){
             throw new GenericOutputException(INVALID_TOKEN);
         }
-
+        
         Date actualDate = new Date();
         if (!token.getExpireDate().after(actualDate)){
             throw new GenericOutputException("Expired Token");
